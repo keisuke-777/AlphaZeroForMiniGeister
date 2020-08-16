@@ -4,11 +4,8 @@
 # 赤駒→2
 # ====================
 
-# パッケージのインポート
 import random
 import math
-
-# import numpy as np
 
 # ゲームの状態
 class State:
