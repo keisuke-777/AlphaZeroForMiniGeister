@@ -1,2 +1,6 @@
 # 生成されるファイルがよくわからんので随時追加予定
 *.DS_Store
+model
+model/*
+__pycache__
+__pycache__/*
