@@ -5,3 +5,6 @@ model
 model/*
 __pycache__
 __pycache__/*
+
+# ver3.6.9
+.python-version

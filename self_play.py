@@ -15,8 +15,11 @@ import pickle
 import os
 
 # パラメータの準備
-SP_GAME_COUNT = 500 # セルフプレイを行うゲーム数（本家は25000）
-SP_TEMPERATURE = 1.0 # ボルツマン分布の温度パラメータ
+SP_GAME_COUNT = 500  # セルフプレイを行うゲーム数（本家は25000）
+SP_TEMPERATURE = 1.0  # ボルツマン分布の温度パラメータ
+
+# ガイスター特有の要素
+# PLACEMENT_PIECE_NUM = 72  # 配置の数(4C2*4C2)*2(先手と後手)
 
 # 先手プレイヤーの価値
 def first_player_value(ended_state):
@@ -25,14 +28,17 @@ def first_player_value(ended_state):
         return -1 if ended_state.is_first_player() else 1
     return 0
 
+
 # 学習データの保存
 def write_data(history):
     now = datetime.now()
-    os.makedirs('./data/', exist_ok=True) # フォルダがない時は生成
-    path = './data/{:04}{:02}{:02}{:02}{:02}{:02}.history'.format(
-        now.year, now.month, now.day, now.hour, now.minute, now.second)
-    with open(path, mode='wb') as f:
+    os.makedirs("./data/", exist_ok=True)  # フォルダがない時は生成
+    path = "./data/{:04}{:02}{:02}{:02}{:02}{:02}.history".format(
+        now.year, now.month, now.day, now.hour, now.minute, now.second
+    )
+    with open(path, mode="wb") as f:
         pickle.dump(history, f)
+
 
 # 1ゲームの実行
 def play(model):
@@ -69,13 +75,14 @@ def play(model):
         value = -value
     return history
 
+
 # セルフプレイ
 def self_play():
     # 学習データ
     history = []
 
     # ベストプレイヤーのモデルの読み込み
-    model = load_model('./model/best.h5')
+    model = load_model("./model/best.h5")
 
     # 複数回のゲームの実行
     for i in range(SP_GAME_COUNT):
@@ -84,8 +91,8 @@ def self_play():
         history.extend(h)
 
         # 出力
-        print('\rSelfPlay {}/{}'.format(i+1, SP_GAME_COUNT), end='')
-    print('')
+        print("\rSelfPlay {}/{}".format(i + 1, SP_GAME_COUNT), end="")
+    print("")
 
     # 学習データの保存
     write_data(history)
@@ -94,6 +101,7 @@ def self_play():
     K.clear_session()
     del model
 
+
 # 動作確認
-if __name__ == '__main__':
+if __name__ == "__main__":
     self_play()

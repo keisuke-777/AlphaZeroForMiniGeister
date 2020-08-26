@@ -12,8 +12,8 @@ from shutil import copy
 import numpy as np
 
 # パラメータの準備
-EN_GAME_COUNT = 10 # 1評価あたりのゲーム数（本家は400）
-EN_TEMPERATURE = 1.0 # ボルツマン分布の温度
+EN_GAME_COUNT = 10  # 1評価あたりのゲーム数（本家は400）
+EN_TEMPERATURE = 1.0  # ボルツマン分布の温度
 
 # 先手プレイヤーのポイント
 def first_player_point(ended_state):
@@ -21,6 +21,7 @@ def first_player_point(ended_state):
     if ended_state.is_lose():
         return 0 if ended_state.is_first_player() else 1
     return 0.5
+
 
 # 1ゲームの実行
 def play(next_actions):
@@ -31,7 +32,7 @@ def play(next_actions):
     while True:
         # ゲーム終了時
         if state.is_done():
-            break;
+            break
 
         # 行動の取得
         next_action = next_actions[0] if state.is_first_player() else next_actions[1]
@@ -43,18 +44,20 @@ def play(next_actions):
     # 先手プレイヤーのポイントを返す
     return first_player_point(state)
 
+
 # ベストプレイヤーの交代
 def update_best_player():
-    copy('./model/latest.h5', './model/best.h5')
-    print('Change BestPlayer')
+    copy("./model/latest.h5", "./model/best.h5")
+    print("Change BestPlayer")
+
 
 # ネットワークの評価
 def evaluate_network():
     # 最新プレイヤーのモデルの読み込み
-    model0 = load_model('./model/latest.h5')
+    model0 = load_model("./model/latest.h5")
 
     # ベストプレイヤーのモデルの読み込み
-    model1 = load_model('./model/best.h5')
+    model1 = load_model("./model/best.h5")
 
     # PV MCTSで行動選択を行う関数の生成
     next_action0 = pv_mcts_action(model0, EN_TEMPERATURE)
@@ -71,12 +74,12 @@ def evaluate_network():
             total_point += 1 - play(list(reversed(next_actions)))
 
         # 出力
-        print('\rEvaluate {}/{}'.format(i + 1, EN_GAME_COUNT), end='')
-    print('')
+        print("\rEvaluate {}/{}".format(i + 1, EN_GAME_COUNT), end="")
+    print("")
 
     # 平均ポイントの計算
     average_point = total_point / EN_GAME_COUNT
-    print('AveragePoint', average_point)
+    print("AveragePoint", average_point)
 
     # モデルの破棄
     K.clear_session()
@@ -84,12 +87,13 @@ def evaluate_network():
     del model1
 
     # ベストプレイヤーの交代
-    if average_point > 0.5:
+    if average_point >= 0.5:
         update_best_player()
         return True
     else:
         return False
 
+
 # 動作確認
-if __name__ == '__main__':
+if __name__ == "__main__":
     evaluate_network()

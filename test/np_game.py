@@ -42,23 +42,36 @@ class State:
 
     # 負けかどうか
     def is_lose(self):
-        # notが若干遅い説あるのでand連結でFalse返すような感じにした方がいいかも
+        if not np.any(self.pieces == 1):  # 自分の青駒が存在しないなら負け
+            # print("青喰い")
+            return True
+        if not np.any(self.enemy_pieces == 2):  # 敵の赤駒が存在しない(全部取っちゃった)なら負け
+            # print("赤喰い")
+            return True
+        if self.is_goal:  # 前の手でゴールされてる
+            # print("ゴール")
+            return True
+        return False
+
+    def is_lose_neo(self):
+        # 意味わからんけど遅くなった？(同速説はある)
         if (
             (not np.any(self.pieces == 1))
-            or (not np.any(self.enemy_pieces == 2))
-            or self.is_goal
+            | (not np.any(self.enemy_pieces == 2))
+            | self.is_goal
         ):
             return True
-        # if not np.any(self.pieces == 1):  # 自分の青駒が存在しないなら負け
-        #     print("青喰い")
-        #     return True
-        # if not np.any(self.enemy_pieces == 2):  # 敵の赤駒が存在しない(全部取っちゃった)なら負け
-        #     print("赤喰い")
-        #     return True
-        # if self.is_goal: # 前の手でゴールされてる
-        #     print("ゴール")
-        #     return True
         return False
+
+    # def is_lose_neo2(self):
+    #     # notが遅いんじゃないかと思ったけどそれより遅い。多分2倍ぐらい遅い
+    #     if (
+    #         np.any(self.pieces == 1)
+    #         and np.any(self.enemy_pieces == 2)
+    #         and self.is_goal != True
+    #     ):
+    #         return False
+    #     return True
 
     # 引き分けかどうか
     def is_draw(self):
@@ -220,8 +233,7 @@ import time
 if __name__ == "__main__":
     # 状態の生成
     state = State()
-
-    # # ゲーム終了までのループ
+    # ゲーム終了までのループ #whileループはforで代用するより早い
     # while True:
     #     # ゲーム終了時
     #     if state.is_done():
@@ -234,13 +246,43 @@ if __name__ == "__main__":
     #     # 文字列表示
     #     print(state)
 
-    state.pieces[13] = 0
-    state.pieces[12] = 2
     start_time = time.time()
     for i in range(1000):
-        a = state.legal_actions()
+        state.is_lose()
     end_time = time.time()
-
-    print(a)
-
     print(str(end_time - start_time) + " [sec]")  # print calculation time
+
+    start_time = time.time()
+    for i in range(1000):
+        state.is_lose_neo()
+    end_time = time.time()
+    print(str(end_time - start_time) + " [sec]")  # print calculation time
+
+    start = time.time()
+    i = 0
+    sumation = 0
+    while True:
+        sumation += 1
+        if sumation > 999998:
+            break
+    elapsed_time = time.time() - start
+    print("while_time:{0}".format(elapsed_time) + "[sec]")
+
+    start = time.time()
+    i = 0
+    sumation = 0
+    for i in range(1000000):
+        sumation += i
+    elapsed_time = time.time() - start
+    print("for_time:{0}".format(elapsed_time) + "[sec]")
+
+    # state.pieces[13] = 0
+    # state.pieces[12] = 2
+    # start_time = time.time()
+    # for i in range(1000):
+    #     a = state.legal_actions()
+    # end_time = time.time()
+
+    # print(a)
+
+    # print(str(end_time - start_time) + " [sec]")  # print calculation time

@@ -30,16 +30,20 @@ class State:
 
         # 駒の初期配置
         if pieces == None or enemy_pieces == None:
-            # とりあえず固定で学習を進める(あとで様子みてからランダムにしたい)
-            self.pieces[13] = 2
-            self.pieces[14] = 1
-            self.pieces[17] = 1
-            self.pieces[18] = 2
+            # とりあえずランダム(本番のガイスターでどうするかは悩み中)
+            piece_list = [1, 1, 2, 2]
 
-            self.enemy_pieces[13] = 2
-            self.enemy_pieces[14] = 1
-            self.enemy_pieces[17] = 1
-            self.enemy_pieces[18] = 2
+            random.shuffle(piece_list)
+            self.pieces[13] = piece_list[0]
+            self.pieces[14] = piece_list[1]
+            self.pieces[17] = piece_list[2]
+            self.pieces[18] = piece_list[3]
+
+            random.shuffle(piece_list)
+            self.enemy_pieces[13] = piece_list[0]
+            self.enemy_pieces[14] = piece_list[1]
+            self.enemy_pieces[17] = piece_list[2]
+            self.enemy_pieces[18] = piece_list[3]
 
     # 負けかどうか
     def is_lose(self):
@@ -206,6 +210,117 @@ class State:
 def random_action(state):
     legal_actions = state.legal_actions()
     return legal_actions[random.randint(0, len(legal_actions) - 1)]
+
+
+# 人間に行動を選択させる
+def human_player_action(state):
+    # 盤面を表示
+    print(state)
+
+    # 入力を待つ(受ける)
+    before_move_place = int(input("Please enter to move piece (左上~右下にかけて0~19) : "))
+    direction = int(input("direction (下0 左1 上2 右3) : "))
+    move = state.position_to_action(before_move_place, direction)
+
+    # 合法手か確認
+    legal_actions = state.legal_actions()
+    if any(elem == move for elem in legal_actions):
+        return move
+
+    # エラー処理(デバッグでしか使わんから適当)
+    print("よくわからんけど非合法手を選んだのでランダム手を選択しました")
+    return legal_actions[random.randint(0, len(legal_actions) - 1)]
+
+
+# モンテカルロ木探索の行動選択
+def mcts_action(state):
+    # モンテカルロ木探索のノード
+    class node:
+        # 初期化
+        def __init__(self, state):
+            self.state = state  # 状態
+            self.w = 0  # 累計価値
+            self.n = 0  # 試行回数
+            self.child_nodes = None  # 子ノード群
+
+        # 評価
+        def evaluate(self):
+            # ゲーム終了時
+            if self.state.is_done():
+                # 勝敗結果で価値を取得
+                value = -1 if self.state.is_lose() else 0  # 負けは-1、引き分けは0
+
+                # 累計価値と試行回数の更新
+                self.w += value
+                self.n += 1
+                return value
+
+            # 子ノードが存在しない時
+            if not self.child_nodes:
+                # プレイアウトで価値を取得
+                value = playout(self.state)
+
+                # 累計価値と試行回数の更新
+                self.w += value
+                self.n += 1
+
+                # 子ノードの展開
+                if self.n == 10:
+                    self.expand()
+                return value
+
+            # 子ノードが存在する時
+            else:
+                # UCB1が最大の子ノードの評価で価値を取得
+                value = -self.next_child_node().evaluate()
+
+                # 累計価値と試行回数の更新
+                self.w += value
+                self.n += 1
+                return value
+
+        # 子ノードの展開
+        def expand(self):
+            legal_actions = self.state.legal_actions()
+            self.child_nodes = []
+            for action in legal_actions:
+                self.child_nodes.append(node(self.state.next(action)))
+
+        # UCB1が最大の子ノードを取得
+        def next_child_node(self):
+            # 試行回数nが0の子ノードを返す
+            for child_node in self.child_nodes:
+                if child_node.n == 0:
+                    return child_node
+
+            # UCB1の計算
+            t = 0
+            for c in self.child_nodes:
+                t += c.n
+            ucb1_values = []
+            for child_node in self.child_nodes:
+                ucb1_values.append(
+                    -child_node.w / child_node.n
+                    + 2 * (2 * math.log(t) / child_node.n) ** 0.5
+                )
+
+            # UCB1が最大の子ノードを返す
+            return self.child_nodes[argmax(ucb1_values)]
+
+    # ルートノードの生成
+    root_node = node(state)
+    root_node.expand()
+
+    # ルートノードを100回評価
+    for _ in range(100):
+        root_node.evaluate()
+
+    # 試行回数の最大値を持つ行動を返す
+    legal_actions = state.legal_actions()
+    n_list = []
+    for c in root_node.child_nodes:
+        n_list.append(c.n)
+    return legal_actions[argmax(n_list)]
 
 
 # 動作確認
