@@ -333,6 +333,11 @@ def mcts_action(state):
     return legal_actions[argmax(n_list)]
 
 
+# 最大値のインデックスを返す
+def argmax(collection, key=None):
+    return collection.index(max(collection))
+
+
 # ゲームの終端までシミュレート
 def playout(state):
     if state.is_lose():
