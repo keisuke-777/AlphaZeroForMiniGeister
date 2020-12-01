@@ -45,6 +45,16 @@ class State:
             self.enemy_pieces[17] = piece_list[2]
             self.enemy_pieces[18] = piece_list[3]
 
+            # データ取り用(駒配置固定)
+            # self.pieces[13] = 2
+            # self.pieces[14] = 1
+            # self.pieces[17] = 1
+            # self.pieces[18] = 2
+            # self.enemy_pieces[13] = 2
+            # self.enemy_pieces[14] = 1
+            # self.enemy_pieces[17] = 1
+            # self.enemy_pieces[18] = 2
+
     # 負けかどうか
     def is_lose(self):
         if not any(elem == 1 for elem in self.pieces):  # 自分の青駒が存在しないなら負け
@@ -311,7 +321,7 @@ def mcts_action(state):
     root_node = node(state)
     root_node.expand()
 
-    # ルートノードを100回評価
+    # ルートノードを評価 (rangeを変化させると評価回数を変化させられる)
     for _ in range(100):
         root_node.evaluate()
 
@@ -321,6 +331,17 @@ def mcts_action(state):
     for c in root_node.child_nodes:
         n_list.append(c.n)
     return legal_actions[argmax(n_list)]
+
+
+# ゲームの終端までシミュレート
+def playout(state):
+    if state.is_lose():
+        return -1
+
+    if state.is_draw():
+        return 0
+
+    return -playout(state.next(random_action(state)))
 
 
 # 動作確認
