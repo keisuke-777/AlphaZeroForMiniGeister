@@ -3,7 +3,7 @@
 # ====================
 
 # パッケージのインポート
-from game import State, random_action, human_player_action
+from game import State, random_action, human_player_action, mcts_action
 from pv_mcts import pv_mcts_action
 from tensorflow.keras.models import load_model
 from tensorflow.keras import backend as K
@@ -11,13 +11,14 @@ from pathlib import Path
 import numpy as np
 
 # パラメータの準備
-EP_GAME_COUNT = 10  # 1評価あたりのゲーム数
+EP_GAME_COUNT = 100  # 1評価あたりのゲーム数
 
 # 先手プレイヤーのポイント
 def first_player_point(ended_state):
     # 1:先手勝利, 0:先手敗北, 0.5:引き分け
     if ended_state.is_lose():
         return 0 if ended_state.is_first_player() else 1
+    print("引き分けました")
     return 0.5
 
 
@@ -60,6 +61,7 @@ def evaluate_algorithm_of(label, next_actions):
 
     # 平均ポイントの計算
     average_point = total_point / EP_GAME_COUNT
+    print("total_point", total_point, "EP_GAME_COUNT", EP_GAME_COUNT)
     print(label, average_point)
 
 
@@ -75,32 +77,28 @@ def evaluate_best_player():
     # next_actions = (next_pv_mcts_action, random_action)
     # evaluate_algorithm_of("VS_Random", next_actions)
 
-    # 過去のモデルの読み込み
-    first_model = load_model("./model/first_best.h5")
-
-    # PV MCTSで行動選択を行う関数の生成
-    first_next_pv_mcts_action = pv_mcts_action(first_model, 0.0)
+    # VS_過去の自分
+    # first_model = load_model("./model/first_best.h5")  # 過去のモデルの読み込み
+    # first_next_pv_mcts_action = pv_mcts_action(first_model, 0.0)  # PV MCTSで行動選択を行う関数の生成
+    # next_actions = (next_pv_mcts_action, first_next_pv_mcts_action)
+    # evaluate_algorithm_of("VS_過去の自分", next_actions)
 
     # VSランダム
     # next_actions = (first_next_pv_mcts_action, random_action)
     # evaluate_algorithm_of("first_VS_Random", next_actions)
 
     # 人類との戦い human_player_action
-    next_actions = (human_player_action, next_pv_mcts_action)
-    evaluate_algorithm_of("自己対戦", next_actions)
-
-    # 自己対戦
-    # next_actions = (next_pv_mcts_action, first_next_pv_mcts_action)
-    # evaluate_algorithm_of("VS_過去の自分", next_actions)
+    # next_actions = (human_player_action, next_pv_mcts_action)
+    # evaluate_algorithm_of("自己対戦", next_actions)
 
     # VSモンテカルロ木探索
-    # next_actions = (next_pv_mcts_action, mcts_action)
-    # evaluate_algorithm_of("VS_MCTS", next_actions)
+    next_actions = (next_pv_mcts_action, mcts_action)
+    evaluate_algorithm_of("VS_MCTS", next_actions)
 
     # モデルの破棄
     K.clear_session()
     del model
-    del first_model
+    # del first_model
 
 
 # 動作確認
