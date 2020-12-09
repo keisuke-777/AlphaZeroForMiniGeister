@@ -88,12 +88,12 @@ def evaluate_best_player():
     # evaluate_algorithm_of("first_VS_Random", next_actions)
 
     # 人類との戦い human_player_action
-    # next_actions = (human_player_action, next_pv_mcts_action)
-    # evaluate_algorithm_of("自己対戦", next_actions)
+    next_actions = (human_player_action, next_pv_mcts_action)
+    evaluate_algorithm_of("自己対戦", next_actions)
 
     # VSモンテカルロ木探索
-    next_actions = (next_pv_mcts_action, mcts_action)
-    evaluate_algorithm_of("VS_MCTS", next_actions)
+    # next_actions = (next_pv_mcts_action, mcts_action)
+    # evaluate_algorithm_of("VS_MCTS", next_actions)
 
     # モデルの破棄
     K.clear_session()

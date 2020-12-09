@@ -71,7 +71,7 @@ class State:
 
     # 引き分けかどうか
     def is_draw(self):
-        return self.depth >= 300  # 300手
+        return self.depth >= 100  # 100手
 
     # ゲーム終了かどうか
     def is_done(self):
@@ -322,7 +322,7 @@ def mcts_action(state):
     root_node.expand()
 
     # ルートノードを評価 (rangeを変化させると評価回数を変化させられる)
-    for _ in range(100):
+    for _ in range(1000):
         root_node.evaluate()
 
     # 試行回数の最大値を持つ行動を返す
