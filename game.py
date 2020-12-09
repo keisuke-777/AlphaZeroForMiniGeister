@@ -322,7 +322,7 @@ def mcts_action(state):
     root_node.expand()
 
     # ルートノードを評価 (rangeを変化させると評価回数を変化させられる)
-    for _ in range(1000):
+    for _ in range(100):
         root_node.evaluate()
 
     # 試行回数の最大値を持つ行動を返す
