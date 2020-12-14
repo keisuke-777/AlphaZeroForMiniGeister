@@ -752,6 +752,18 @@ def guess_enemy_piece_player_for_debug(model, ii_state, just_before_enemy_action
     return action_num
 
 
+# 末續さんのルールベースで推測するやつ
+def suetsugu_estimate(estimate_box, ii_state, just_before_enemy_action_num):
+    # 前進し接敵数が増えたが、自分から見て橋の1段目または2段目に来た 2.5
+    # 前進し、接敵数が増えた -1.5
+    # 横に動き、接敵数が増えた -1.0
+    # 前に動き、接敵数が0になった 4.0
+    # 上記以外の動作で接敵数が0になった 1.5
+    # 接敵数が0のまま変わらず、自分から見て1段目または2段目にきた 10.0
+    # 接敵数が1以上であるのに動かなかった -1.2
+    pass
+
+
 # 動作確認
 if __name__ == "__main__":
     start = time.time()

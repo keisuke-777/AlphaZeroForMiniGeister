@@ -34,7 +34,7 @@ class State:
             # piece_list = [1, 1, 2, 2]
             piece_list = [2, 1, 1, 2]
 
-            # random.shuffle(piece_list)  # 配置をランダムに
+            random.shuffle(piece_list)  # 配置をランダムに
             self.pieces[13] = piece_list[0]
             self.pieces[14] = piece_list[1]
             self.pieces[17] = piece_list[2]
@@ -46,7 +46,7 @@ class State:
             self.keep_pieces_color[2] = piece_list[1]
             self.keep_pieces_color[3] = piece_list[0]
 
-            # random.shuffle(piece_list)  # 配置をランダムにして使い回し
+            random.shuffle(piece_list)  # 配置をランダムにして使い回し
             self.enemy_pieces[13] = piece_list[0]
             self.enemy_pieces[14] = piece_list[1]
             self.enemy_pieces[17] = piece_list[2]
@@ -305,6 +305,113 @@ def human_player_action(state):
     return legal_actions[random.randint(0, len(legal_actions) - 1)]
 
 
+# モンテカルロ木探索の行動選択
+def mcts_action(state):
+    # モンテカルロ木探索のノード
+    class node:
+        # 初期化
+        def __init__(self, state):
+            self.state = state  # 状態
+            self.w = 0  # 累計価値
+            self.n = 0  # 試行回数
+            self.child_nodes = None  # 子ノード群
+
+        # 評価
+        def evaluate(self):
+            # ゲーム終了時
+            if self.state.is_done():
+                # 勝敗結果で価値を取得
+                value = -1 if self.state.is_lose() else 0  # 負けは-1、引き分けは0
+
+                # 累計価値と試行回数の更新
+                self.w += value
+                self.n += 1
+                return value
+
+            # 子ノードが存在しない時
+            if not self.child_nodes:
+                # プレイアウトで価値を取得
+                value = playout(self.state)
+
+                # 累計価値と試行回数の更新
+                self.w += value
+                self.n += 1
+
+                # 子ノードの展開
+                if self.n == 10:
+                    self.expand()
+                return value
+
+            # 子ノードが存在する時
+            else:
+                # UCB1が最大の子ノードの評価で価値を取得
+                value = -self.next_child_node().evaluate()
+
+                # 累計価値と試行回数の更新
+                self.w += value
+                self.n += 1
+                return value
+
+        # 子ノードの展開
+        def expand(self):
+            legal_actions = self.state.legal_actions()
+            self.child_nodes = []
+            for action in legal_actions:
+                self.child_nodes.append(node(self.state.next(action)))
+
+        # UCB1が最大の子ノードを取得
+        def next_child_node(self):
+            # 試行回数nが0の子ノードを返す
+            for child_node in self.child_nodes:
+                if child_node.n == 0:
+                    return child_node
+
+            # UCB1の計算
+            t = 0
+            for c in self.child_nodes:
+                t += c.n
+            ucb1_values = []
+            for child_node in self.child_nodes:
+                ucb1_values.append(
+                    -child_node.w / child_node.n
+                    + 2 * (2 * math.log(t) / child_node.n) ** 0.5
+                )
+
+            # UCB1が最大の子ノードを返す
+            return self.child_nodes[argmax(ucb1_values)]
+
+    # ルートノードの生成
+    root_node = node(state)
+    root_node.expand()
+
+    # ルートノードを評価 (rangeを変化させると評価回数を変化させられる)
+    for _ in range(100):
+        root_node.evaluate()
+
+    # 試行回数の最大値を持つ行動を返す
+    legal_actions = state.legal_actions()
+    n_list = []
+    for c in root_node.child_nodes:
+        n_list.append(c.n)
+    return legal_actions[argmax(n_list)]
+
+
+# 最大値のインデックスを返す
+def argmax(collection, key=None):
+    return collection.index(max(collection))
+
+
+# ゲームの終端までシミュレート
+def playout(state):
+    if state.is_lose():
+        return -1
+
+    if state.is_draw():
+        return 0
+
+    return -playout(state.next(random_action(state)))
+
+
 import GuessEnemyPiece
 import numpy as np
 import itertools
@@ -358,7 +465,8 @@ if __name__ == "__main__":
 
             # 次の状態の取得
             if state.depth % 2 == 0:
-                just_before_action_num = random_action(state)
+                # just_before_action_num = random_action(state) #ランダム
+                just_before_action_num = mcts_action(state)  # モンテカルロ
                 # just_before_action_num = human_player_action(state)  # 人間
                 # print("ランダムAIの行動番号", just_before_action_num)
                 if just_before_action_num == 2 or just_before_action_num == 14:
@@ -368,14 +476,15 @@ if __name__ == "__main__":
                     break
                 state = state.next(just_before_action_num)
             else:
-                just_before_enemy_action_num = just_before_action_num
-                guess_player_action = GuessEnemyPiece.guess_enemy_piece_player_for_debug(
-                    model, ii_state, just_before_enemy_action_num
-                )
+                # just_before_enemy_action_num = just_before_action_num
+                # guess_player_action = GuessEnemyPiece.guess_enemy_piece_player_for_debug(
+                #     model, ii_state, just_before_enemy_action_num
+                # )
+                # ii_state.return_estimate_value()  # 現状の推測値をプリントするやつ
+                # just_before_action_num = guess_player_action
 
-                ii_state.return_estimate_value()  # 現状の推測値をプリントするやつ
+                just_before_action_num = random_action(state)  # ランダム
 
-                just_before_action_num = guess_player_action
                 # print("自作AIの行動番号", just_before_action_num)
                 if just_before_action_num == 2 or just_before_action_num == 14:
                     print("自作AIのゴール")

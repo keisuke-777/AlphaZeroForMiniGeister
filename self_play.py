@@ -23,7 +23,7 @@ SP_TEMPERATURE = 1.0  # ボルツマン分布の温度パラメータ
 
 # 先手プレイヤーの価値
 def first_player_value(ended_state):
-    # 1:先手勝利, -1:先手敗北, 0:引き分け(play関数で-1に変更ずみ)
+    # 1:先手勝利, -1:先手敗北, 0:引き分け(-1にするならplay関数で行う)
     if ended_state.is_lose():
         return -1 if ended_state.is_first_player() else 1
     return 0
@@ -70,13 +70,21 @@ def play(model):
 
     # 学習データに価値を追加
     value = first_player_value(state)
-    if value == 0:  # 引き分けの場合、全て評価を-1とする
-        for i in range(len(history)):
-            history[i][2] = -1
-    else:
-        for i in range(len(history)):
-            history[i][2] = value
-            value = -value
+
+    # 引き分けの際に、全て評価を-1とする場合
+    # if value == 0:
+    #     for i in range(len(history)):
+    #         history[i][2] = -1
+    # else:
+    #     for i in range(len(history)):
+    #         history[i][2] = value
+    #         value = -value
+
+    # 引き分けを0とする
+    for i in range(len(history)):
+        history[i][2] = value
+        value = -value
+
     return history
 
 

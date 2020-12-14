@@ -74,8 +74,8 @@ def evaluate_best_player():
     next_pv_mcts_action = pv_mcts_action(model, 0.0)
 
     # VSランダム
-    # next_actions = (next_pv_mcts_action, random_action)
-    # evaluate_algorithm_of("VS_Random", next_actions)
+    next_actions = (next_pv_mcts_action, random_action)
+    evaluate_algorithm_of("VS_Random", next_actions)
 
     # VS_過去の自分
     # first_model = load_model("./model/first_best.h5")  # 過去のモデルの読み込み
@@ -88,8 +88,8 @@ def evaluate_best_player():
     # evaluate_algorithm_of("first_VS_Random", next_actions)
 
     # 人類との戦い human_player_action
-    next_actions = (human_player_action, next_pv_mcts_action)
-    evaluate_algorithm_of("自己対戦", next_actions)
+    # next_actions = (human_player_action, next_pv_mcts_action)
+    # evaluate_algorithm_of("自己対戦", next_actions)
 
     # VSモンテカルロ木探索
     # next_actions = (next_pv_mcts_action, mcts_action)
