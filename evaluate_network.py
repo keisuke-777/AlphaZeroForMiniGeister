@@ -10,6 +10,7 @@ from tensorflow.keras import backend as K
 from pathlib import Path
 from shutil import copy
 import numpy as np
+import datetime
 
 # パラメータの準備
 EN_GAME_COUNT = 10  # 1評価あたりのゲーム数（本家は400）
@@ -47,6 +48,13 @@ def play(next_actions):
 
 # ベストプレイヤーの交代
 def update_best_player():
+    # 日時でファイルを命名
+    filename = "./buckup/log_" + datetime.datetime.now().strftime("%Y%m%d_%H%M") + ".h5"
+    # ファイル作成
+    f = open(filename, "w")
+    # モデルデータのバックアップ
+    copy("./model/latest.h5", filename)
+
     copy("./model/latest.h5", "./model/best.h5")
     print("Change BestPlayer")
 
