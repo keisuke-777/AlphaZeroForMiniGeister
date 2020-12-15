@@ -31,29 +31,29 @@ class State:
         # 駒の初期配置
         if pieces == None or enemy_pieces == None:
             # とりあえずランダム(本番のガイスターでどうするかは悩み中)
-            piece_list = [1, 1, 2, 2]
+            # piece_list = [1, 1, 2, 2]
 
-            random.shuffle(piece_list)
-            self.pieces[13] = piece_list[0]
-            self.pieces[14] = piece_list[1]
-            self.pieces[17] = piece_list[2]
-            self.pieces[18] = piece_list[3]
+            # random.shuffle(piece_list)
+            # self.pieces[13] = piece_list[0]
+            # self.pieces[14] = piece_list[1]
+            # self.pieces[17] = piece_list[2]
+            # self.pieces[18] = piece_list[3]
 
-            random.shuffle(piece_list)
-            self.enemy_pieces[13] = piece_list[0]
-            self.enemy_pieces[14] = piece_list[1]
-            self.enemy_pieces[17] = piece_list[2]
-            self.enemy_pieces[18] = piece_list[3]
+            # random.shuffle(piece_list)
+            # self.enemy_pieces[13] = piece_list[0]
+            # self.enemy_pieces[14] = piece_list[1]
+            # self.enemy_pieces[17] = piece_list[2]
+            # self.enemy_pieces[18] = piece_list[3]
 
             # データ取り用(駒配置固定)
-            # self.pieces[13] = 2
-            # self.pieces[14] = 1
-            # self.pieces[17] = 1
-            # self.pieces[18] = 2
-            # self.enemy_pieces[13] = 2
-            # self.enemy_pieces[14] = 1
-            # self.enemy_pieces[17] = 1
-            # self.enemy_pieces[18] = 2
+            self.pieces[13] = 2
+            self.pieces[14] = 1
+            self.pieces[17] = 1
+            self.pieces[18] = 2
+            self.enemy_pieces[13] = 2
+            self.enemy_pieces[14] = 1
+            self.enemy_pieces[17] = 1
+            self.enemy_pieces[18] = 2
 
     # 負けかどうか
     def is_lose(self):
