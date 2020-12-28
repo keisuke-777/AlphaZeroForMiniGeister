@@ -15,7 +15,7 @@ from pathlib import Path
 from tensorflow.keras.models import load_model
 
 gamma = 1.0
-PRINT_DEBUG = False
+PRINT_DEBUG = True
 
 # おそらく不完全情報ガイスター(のstateのみ？)を定義してそれを更新して管理した方がよさげ
 # 不完全情報ガイスターの盤面情報及びそれらの推測値
@@ -274,7 +274,7 @@ class II_State:
                 self.all_piece[6],
                 self.all_piece[7],
             )
-            print(estimate_value)
+        return estimate_value
 
     # ボードの文字列表示
     def __str__(self):
@@ -667,6 +667,56 @@ def action_decision(model, ii_state):
         print("legal_action", legal_actions)
         print("このエージェントが判断する行動価値", actions_value_sum_list)
     return best_action
+
+
+# どれほど正確に推論できているかどうかを計測する
+def measure_estimate_accuracy(ii_state, state, store_house):
+    # if state.depth % 10 != 0:
+    #     return
+    estimate_value = ii_state.return_estimate_value()
+    real_blue_piece = list(
+        ii_state.real_enemy_piece_blue_set
+    )  # 0~4の青駒のインデックスを格納 ex)(1, 2)
+
+    # 死んでいる敵駒の数(種類が確定している敵駒の数とも言える)
+    dead_enemy_piece_num = (
+        4 - ii_state.living_piece_color[0] - ii_state.living_piece_color[1]
+    )
+    dead_enemy_blue_piece_num = 2 - ii_state.living_piece_color[0]
+
+    # estimate_valueの上位二つのインデックスを取得 array([n])でとってくるのでケツに[0][0]つける
+    top_two = [
+        np.where(estimate_value == np.sort(estimate_value)[-1]),
+        np.where(estimate_value == np.sort(estimate_value)[-2]),
+    ]
+    # real_blue_pieceといくつ一致しているかを確認(最大2)
+    number_of_matches = 0
+    if real_blue_piece[0] == top_two[0][0][0] or real_blue_piece[0] == top_two[1][0][0]:
+        number_of_matches += 1
+    if real_blue_piece[1] == top_two[0][0][0] or real_blue_piece[1] == top_two[1][0][0]:
+        number_of_matches += 1
+
+    # 一致度合いを計測
+    degree_of_match = float(0)
+    for index, est_val in enumerate(estimate_value):
+        if index == real_blue_piece[0] or index == real_blue_piece[1]:
+            # 実際の駒の色が青だった場合
+            degree_of_match += est_val - 0.5
+        else:
+            # 実際の駒の色が赤だった場合
+            degree_of_match += 0.5 - est_val
+    degree_of_match /= 2
+    if PRINT_DEBUG:
+        print("敵の青駒のインデックス", real_blue_piece)
+        print("ターン数", "上位2駒の一致数", "一致度", "敵の死駒数", "敵の青の死駒数", sep=",")
+    print(
+        state.depth,
+        number_of_matches,
+        degree_of_match,
+        dead_enemy_piece_num,
+        dead_enemy_blue_piece_num,
+        sep=",",
+    )
 
 
 # 駒をテレポート(デバッグ用で破壊的)(敵駒の存在を想定していない)

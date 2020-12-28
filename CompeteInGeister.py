@@ -476,26 +476,26 @@ if __name__ == "__main__":
                     break
                 state = state.next(just_before_action_num)
             else:
-                # just_before_enemy_action_num = just_before_action_num
-                # guess_player_action = GuessEnemyPiece.guess_enemy_piece_player_for_debug(
-                #     model, ii_state, just_before_enemy_action_num
-                # )
-                # ii_state.return_estimate_value()  # 現状の推測値をプリントするやつ
-                # just_before_action_num = guess_player_action
+                just_before_enemy_action_num = just_before_action_num
+                guess_player_action = GuessEnemyPiece.guess_enemy_piece_player_for_debug(
+                    model, ii_state, just_before_enemy_action_num
+                )
 
-                just_before_action_num = random_action(state)  # ランダム
+                store_house = 0
+                GuessEnemyPiece.measure_estimate_accuracy(ii_state, state, store_house)
+                just_before_action_num = guess_player_action
+                if PRINT_DEBUG:
+                    print(ii_state.return_estimate_value())  # 現状の推測値をプリントするやつ
+                    print("自作AIの行動番号", just_before_action_num)
 
-                # print("自作AIの行動番号", just_before_action_num)
+                # just_before_action_num = random_action(state)  # ランダムエージェント
+
                 if just_before_action_num == 2 or just_before_action_num == 14:
                     print("自作AIのゴール")
                     state.is_goal = True
                     state.goal_player = 1
                     break
                 state = state.next(just_before_action_num)
-
-                # just_before_action_num = random_action(state)
-                # print("敵(ランダムAI)の行動番号", just_before_action_num)
-                # state = state.next(just_before_action_num)
 
             # 文字列表示
             # print("depth", state.depth)
