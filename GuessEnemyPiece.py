@@ -515,10 +515,13 @@ def enemy_ii_predict(model, ii_state):
     policies_list = []
     enemy_legal_actions = list(ii_state.enemy_legal_actions())
 
+    # 相手の全ての盤面パターンについてforループ
     for num_and_enemy_blue in ii_state.enemy_estimated_num:  # enemyのパターンの確からしさを求めたい
         # 赤駒のインデックスをセット形式で獲得(my_blueはタプル)
         enemy_red_set = enemy_piece_set - set(num_and_enemy_blue[1])
         sum_np_policies = np.array([0] * len(enemy_legal_actions), dtype="f4")
+
+        # 自分の全ての盤面パターンについてforループ
         for num_and_my_blue in ii_state.my_estimated_num:
             my_red_set = my_piece_set - set(num_and_my_blue[1])
 
@@ -537,32 +540,52 @@ def enemy_ii_predict(model, ii_state):
             y = model.predict(x, batch_size=1)
             policies = y[0][0][enemy_legal_actions]  # 合法手のみ
             policies /= sum(policies) if sum(policies) else 1  # 合計1の確率分布に変換
+            print("ポリシーだよ", policies)
 
             # 行列演算するためにndarrayに変換
             np_policies = np.array(policies, dtype="f4")
             # myのパターンは既存のpoliciesに足すだけ
             sum_np_policies = sum_np_policies + np_policies
 
+        print("sum_np_policies", sum_np_policies)
         policies_list.extend([sum_np_policies])
+
+    # 敵のあり得る全パターンの盤面について、全ての行動の行動価値を返す(update_predict_num_allでbeforehand_estimated_numとして使用)
     return policies_list
 
 
 # 相手の行動から推測値を更新
-# state, enemy_ii_predictで作成した推測値の行列, 敵の行動番号
+# state, enemy_ii_predictで作成した推測値の行列(policies_list), 敵の行動番号
 def update_predict_num_all(ii_state, beforehand_estimated_num, enemy_action_num):
-    # print(enemy_action_num)
+    print("ポリシーリスト", beforehand_estimated_num)
     enemy_legal_actions = list(ii_state.enemy_legal_actions())
+
+    # enemy_action_indexは直前にとった行動
     enemy_action_index = enemy_legal_actions.index(enemy_action_num)
 
     # 推測値を確率１の確率分布にするための布石
     sum_estimated_num = 0.0
 
+    # 行動価値を用いて推測値の更新
     for index, enemy_estimated_num in enumerate(ii_state.enemy_estimated_num):
         # ii_state.enemy_estimated_num[index][0]
         enemy_estimated_num[0] = (
-            enemy_estimated_num[0] * gamma
-        ) + beforehand_estimated_num[index][enemy_action_index]
+            (enemy_estimated_num[0] * gamma)
+            + beforehand_estimated_num[index][enemy_action_index]
+        )  # beforehand_estimated_numのenemy_action_indexに対応する行動価値を全部足す
         sum_estimated_num += enemy_estimated_num[0]  # 推測値の合計をキープしておく
+
+    # もし負の値が行動価値に存在するのであれば底上げして負の値を消す処理をする(現状は存在しないはずなのでこの処理消しとる)
+    # min_ene_est = 0.0
+    # for enemy_estimated_num in ii_state.enemy_estimated_num:
+    #     if min_ene_est > enemy_estimated_num[0]:
+    #         min_ene_est = enemy_estimated_num[0]
+    # if min_ene_est < 0.0:  # 負の値が存在する
+    #     sum_estimated_num = 0.0  # 初期化
+    #     for enemy_estimated_num in ii_state.enemy_estimated_num:
+    #         # 最小値が0になるように全ての値を底上げ(min_ene_estは負)
+    #         enemy_estimated_num[0] += min_ene_est
+    #         sum_estimated_num += enemy_estimated_num[0]
 
     # 推測値を合計1の確率分布に変換
     for enemy_estimated_num in ii_state.enemy_estimated_num:
