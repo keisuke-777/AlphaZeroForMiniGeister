@@ -15,7 +15,7 @@ from pathlib import Path
 from tensorflow.keras.models import load_model
 
 gamma = 1.0
-PRINT_DEBUG = True
+PRINT_DEBUG = False
 
 # おそらく不完全情報ガイスター(のstateのみ？)を定義してそれを更新して管理した方がよさげ
 # 不完全情報ガイスターの盤面情報及びそれらの推測値
@@ -540,14 +540,12 @@ def enemy_ii_predict(model, ii_state):
             y = model.predict(x, batch_size=1)
             policies = y[0][0][enemy_legal_actions]  # 合法手のみ
             policies /= sum(policies) if sum(policies) else 1  # 合計1の確率分布に変換
-            print("ポリシーだよ", policies)
 
             # 行列演算するためにndarrayに変換
             np_policies = np.array(policies, dtype="f4")
             # myのパターンは既存のpoliciesに足すだけ
             sum_np_policies = sum_np_policies + np_policies
 
-        print("sum_np_policies", sum_np_policies)
         policies_list.extend([sum_np_policies])
 
     # 敵のあり得る全パターンの盤面について、全ての行動の行動価値を返す(update_predict_num_allでbeforehand_estimated_numとして使用)
@@ -557,7 +555,6 @@ def enemy_ii_predict(model, ii_state):
 # 相手の行動から推測値を更新
 # state, enemy_ii_predictで作成した推測値の行列(policies_list), 敵の行動番号
 def update_predict_num_all(ii_state, beforehand_estimated_num, enemy_action_num):
-    print("ポリシーリスト", beforehand_estimated_num)
     enemy_legal_actions = list(ii_state.enemy_legal_actions())
 
     # enemy_action_indexは直前にとった行動
@@ -693,7 +690,7 @@ def action_decision(model, ii_state):
 
 
 # どれほど正確に推論できているかどうかを計測する
-def measure_estimate_accuracy(ii_state, state, store_house):
+def measure_estimate_accuracy(ii_state, state, csvWriter):
     # if state.depth % 10 != 0:
     #     return
     estimate_value = ii_state.return_estimate_value()
@@ -732,13 +729,22 @@ def measure_estimate_accuracy(ii_state, state, store_house):
     if PRINT_DEBUG:
         print("敵の青駒のインデックス", real_blue_piece)
         print("ターン数", "上位2駒の一致数", "一致度", "敵の死駒数", "敵の青の死駒数", sep=",")
-    print(
-        state.depth,
-        number_of_matches,
-        degree_of_match,
-        dead_enemy_piece_num,
-        dead_enemy_blue_piece_num,
-        sep=",",
+        print(
+            state.depth,
+            number_of_matches,
+            degree_of_match,
+            dead_enemy_piece_num,
+            dead_enemy_blue_piece_num,
+            sep=",",
+        )
+    csvWriter.writerow(
+        [
+            state.depth,
+            number_of_matches,
+            degree_of_match,
+            dead_enemy_piece_num,
+            dead_enemy_blue_piece_num,
+        ]
     )
 
 

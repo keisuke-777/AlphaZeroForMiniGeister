@@ -3,6 +3,7 @@
 
 import random
 import math
+import csv
 from GuessEnemyPiece import PRINT_DEBUG
 
 # ゲームの状態
@@ -432,74 +433,81 @@ if __name__ == "__main__":
     # 勝利数を保管[先手、後手]
     win_player = [0, 0]
 
-    for _ in range(100):
+    with open("estimate_accuracy.csv", "w") as csvFile:
+        csvWriter = csv.writer(csvFile)
+        # csvWriter.writerow([])  # 改行
 
-        # 直前の行動を保管
-        just_before_action_num = 0
+        for _ in range(100):
 
-        # 状態の生成
-        state = State()
-        blue_id_list = state.get_blue_from_keep_pieces_color()
-        # ii_state = GuessEnemyPiece.II_State({4, 7})
-        ii_state = GuessEnemyPiece.II_State(
-            {blue_id_list[2], blue_id_list[3]}, {blue_id_list[0], blue_id_list[1]}
-        )
+            # 直前の行動を保管
+            just_before_action_num = 0
 
-        # ゲーム終了までのループ
-        while True:
-            # ゲーム終了時
-            if state.is_done():
-                # print("ゲーム終了:ターン数", state.depth)
+            # 状態の生成
+            state = State()
+            blue_id_list = state.get_blue_from_keep_pieces_color()
+            # ii_state = GuessEnemyPiece.II_State({4, 7})
+            ii_state = GuessEnemyPiece.II_State(
+                {blue_id_list[2], blue_id_list[3]}, {blue_id_list[0], blue_id_list[1]}
+            )
 
-                # if state.is_lose():
-                #     if state.depth % 2 == 0:
-                #         print("敗北")
-                #     else:
-                #         print("勝利or引き分け")
-                # else:
-                #     if state.depth % 2 == 1:
-                #         print("勝利or引き分け")
-                #     else:
-                #         print("敗北")
-                break
+            # ゲーム終了までのループ
+            while True:
+                # ゲーム終了時
+                if state.is_done():
+                    # print("ゲーム終了:ターン数", state.depth)
 
-            # 次の状態の取得
-            if state.depth % 2 == 0:
-                # just_before_action_num = random_action(state) #ランダム
-                just_before_action_num = mcts_action(state)  # モンテカルロ
-                # just_before_action_num = human_player_action(state)  # 人間
-                # print("ランダムAIの行動番号", just_before_action_num)
-                if just_before_action_num == 2 or just_before_action_num == 14:
-                    print("ランダムAIのゴール")
-                    state.is_goal = True
-                    state.goal_player = 0
+                    # if state.is_lose():
+                    #     if state.depth % 2 == 0:
+                    #         print("敗北")
+                    #     else:
+                    #         print("勝利or引き分け")
+                    # else:
+                    #     if state.depth % 2 == 1:
+                    #         print("勝利or引き分け")
+                    #     else:
+                    #         print("敗北")
                     break
-                state = state.next(just_before_action_num)
-            else:
-                just_before_enemy_action_num = just_before_action_num
-                guess_player_action = GuessEnemyPiece.guess_enemy_piece_player_for_debug(
-                    model, ii_state, just_before_enemy_action_num
-                )
 
-                store_house = 0
-                GuessEnemyPiece.measure_estimate_accuracy(ii_state, state, store_house)
-                just_before_action_num = guess_player_action
+                # 次の状態の取得
+                if state.depth % 2 == 0:
+                    just_before_action_num = random_action(state)  # ランダム
+                    # just_before_action_num = mcts_action(state)  # モンテカルロ
+                    # just_before_action_num = human_player_action(state)  # 人間
+                    # print("ランダムAIの行動番号", just_before_action_num)
+                    if just_before_action_num == 2 or just_before_action_num == 14:
+                        print("ランダムAIのゴール")
+                        state.is_goal = True
+                        state.goal_player = 0
+                        break
+                    state = state.next(just_before_action_num)
+                else:
+                    just_before_enemy_action_num = just_before_action_num
+                    guess_player_action = GuessEnemyPiece.guess_enemy_piece_player_for_debug(
+                        model, ii_state, just_before_enemy_action_num
+                    )
+
+                    GuessEnemyPiece.measure_estimate_accuracy(
+                        ii_state, state, csvWriter
+                    )
+                    just_before_action_num = guess_player_action
+                    if PRINT_DEBUG:
+                        print(ii_state.return_estimate_value())  # 現状の推測値をプリントするやつ
+                        print("自作AIの行動番号", just_before_action_num)
+
+                    # just_before_action_num = random_action(state)  # ランダムエージェント
+
+                    if just_before_action_num == 2 or just_before_action_num == 14:
+                        print("自作AIのゴール")
+                        state.is_goal = True
+                        state.goal_player = 1
+                        break
+                    state = state.next(just_before_action_num)
+
+                # 文字列表示
+                # print("depth", state.depth)
                 if PRINT_DEBUG:
-                    print(ii_state.return_estimate_value())  # 現状の推測値をプリントするやつ
-                    print("自作AIの行動番号", just_before_action_num)
+                    print(state)
+            state.winner_checker(win_player)
+            print(win_player)
 
-                # just_before_action_num = random_action(state)  # ランダムエージェント
-
-                if just_before_action_num == 2 or just_before_action_num == 14:
-                    print("自作AIのゴール")
-                    state.is_goal = True
-                    state.goal_player = 1
-                    break
-                state = state.next(just_before_action_num)
-
-            # 文字列表示
-            # print("depth", state.depth)
-            if PRINT_DEBUG:
-                print(state)
-        state.winner_checker(win_player)
-        print(win_player)
+    csvFile.close()
