@@ -5,6 +5,10 @@ model
 model/*
 __pycache__
 __pycache__/*
+not_need_buckup
+not_need_buckup/*
+test
+test/*
 
 # ver3.6.9
 .python-version
