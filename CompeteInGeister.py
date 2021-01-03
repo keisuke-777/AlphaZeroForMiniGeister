@@ -437,7 +437,7 @@ if __name__ == "__main__":
         csvWriter = csv.writer(csvFile)
         # csvWriter.writerow([])  # 改行
 
-        for _ in range(100):
+        for _ in range(1000):
 
             # 直前の行動を保管
             just_before_action_num = 0
