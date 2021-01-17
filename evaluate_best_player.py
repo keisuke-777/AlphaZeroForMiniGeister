@@ -4,7 +4,7 @@
 
 # パッケージのインポート
 from game import State, random_action, human_player_action, mcts_action
-from pv_mcts import pv_mcts_action
+from pv_mcts import pv_mcts_action, high_value_action
 from tensorflow.keras.models import load_model
 from tensorflow.keras import backend as K
 from pathlib import Path
@@ -13,12 +13,16 @@ import numpy as np
 # パラメータの準備
 EP_GAME_COUNT = 100  # 1評価あたりのゲーム数
 
+drow_count = 0
+
 # 先手プレイヤーのポイント
 def first_player_point(ended_state):
     # 1:先手勝利, 0:先手敗北, 0.5:引き分け
     if ended_state.is_lose():
         return 0 if ended_state.is_first_player() else 1
-    print("引き分けました")
+    # print("引き分けました")
+    global drow_count
+    drow_count = drow_count + 1
     return 0.5
 
 
@@ -70,6 +74,11 @@ def evaluate_best_player():
     # ベストプレイヤーのモデルの読み込み
     model = load_model("./model/best.h5")
 
+    # 行動価値が高い行動を選択し続けるエージェントvsランダム
+    # pv_high_value_action = high_value_action(model)
+    # next_actions = (pv_high_value_action, random_action)
+    # evaluate_algorithm_of("Value_VS_Random", next_actions)
+
     # PV MCTSで行動選択を行う関数の生成
     next_pv_mcts_action = pv_mcts_action(model, 0.0)
 
@@ -101,6 +110,30 @@ def evaluate_best_player():
     # del first_model
 
 
+def evaluate_miniGeisterLog():
+    global drow_count
+    for i in range(1, 34):
+        drow_count = 0
+        model_pass_str = "./miniGeisterLog/log" + str(i) + ".h5"
+        model = load_model(model_pass_str)
+
+        # valueVSランダム
+        # pv_high_value_action = high_value_action(model)
+        # next_actions = (pv_high_value_action, random_action)
+        # evaluate_algorithm_of("Value_VS_Random", next_actions)
+        # print("drow:", drow_count)
+
+        # valueVSモンテカルロ木探索
+        pv_high_value_action = high_value_action(model)
+        next_actions = (pv_high_value_action, mcts_action)
+        evaluate_algorithm_of("Value_VS_Mcts", next_actions)
+        print("drow:", drow_count)
+
+        K.clear_session()
+        del model
+
+
 # 動作確認
 if __name__ == "__main__":
-    evaluate_best_player()
+    # evaluate_best_player()
+    evaluate_miniGeisterLog()

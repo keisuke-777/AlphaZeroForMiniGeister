@@ -9,6 +9,12 @@ not_need_buckup
 not_need_buckup/*
 test
 test/*
+need_in_IPSJ
+need_in_IPSJ/*
+miniGeisterLog
+miniGeisterLog/*
+buckup
+buckup/*
 
 # ver3.6.9
 .python-version

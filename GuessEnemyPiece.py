@@ -726,6 +726,7 @@ def measure_estimate_accuracy(ii_state, state, csvWriter):
             # 実際の駒の色が赤だった場合
             degree_of_match += 0.5 - est_val
     degree_of_match /= 2
+
     if PRINT_DEBUG:
         print("敵の青駒のインデックス", real_blue_piece)
         print("ターン数", "上位2駒の一致数", "一致度", "敵の死駒数", "敵の青の死駒数", sep=",")

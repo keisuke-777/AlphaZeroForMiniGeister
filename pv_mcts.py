@@ -11,7 +11,7 @@ from pathlib import Path
 import numpy as np
 
 # パラメータの準備
-PV_EVALUATE_COUNT = 50 # 1推論あたりのシミュレーション回数（本家は1600）
+PV_EVALUATE_COUNT = 50  # 1推論あたりのシミュレーション回数（本家は1600）
 
 # 推論
 def predict(model, state):
@@ -24,12 +24,13 @@ def predict(model, state):
     y = model.predict(x, batch_size=1)
 
     # 方策の取得
-    policies = y[0][0][list(state.legal_actions())] # 合法手のみ
-    policies /= sum(policies) if sum(policies) else 1 # 合計1の確率分布に変換
+    policies = y[0][0][list(state.legal_actions())]  # 合法手のみ
+    policies /= sum(policies) if sum(policies) else 1  # 合計1の確率分布に変換
 
     # 価値の取得
     value = y[1][0][0]
     return policies, value
+
 
 # ノードのリストを試行回数のリストに変換
 def nodes_to_scores(nodes):
@@ -38,16 +39,17 @@ def nodes_to_scores(nodes):
         scores.append(c.n)
     return scores
 
+
 # モンテカルロ木探索のスコアの取得
 def pv_mcts_scores(model, state, temperature):
     # モンテカルロ木探索のノードの定義
     class Node:
         # ノードの初期化
         def __init__(self, state, p):
-            self.state = state # 状態
-            self.p = p # 方策
-            self.w = 0 # 累計価値
-            self.n = 0 # 試行回数
+            self.state = state  # 状態
+            self.p = p  # 方策
+            self.w = 0  # 累計価値
+            self.n = 0  # 試行回数
             self.child_nodes = None  # 子ノード群
 
         # 局面の価値の計算
@@ -94,8 +96,10 @@ def pv_mcts_scores(model, state, temperature):
             t = sum(nodes_to_scores(self.child_nodes))
             pucb_values = []
             for child_node in self.child_nodes:
-                pucb_values.append((-child_node.w / child_node.n if child_node.n else 0.0) +
-                    C_PUCT * child_node.p * sqrt(t) / (1 + child_node.n))
+                pucb_values.append(
+                    (-child_node.w / child_node.n if child_node.n else 0.0)
+                    + C_PUCT * child_node.p * sqrt(t) / (1 + child_node.n)
+                )
 
             # アーク評価値が最大の子ノードを返す
             return self.child_nodes[np.argmax(pucb_values)]
@@ -109,30 +113,48 @@ def pv_mcts_scores(model, state, temperature):
 
     # 合法手の確率分布
     scores = nodes_to_scores(root_node.child_nodes)
-    if temperature == 0: # 最大値のみ1
+    if temperature == 0:  # 最大値のみ1
         action = np.argmax(scores)
         scores = np.zeros(len(scores))
         scores[action] = 1
-    else: # ボルツマン分布でバラつき付加
+    else:  # ボルツマン分布でバラつき付加
         scores = boltzman(scores, temperature)
     return scores
+
+
+# 価値が最も高い行動を選択(player)
+def high_value_action(model):
+    def high_value_action(state):
+        legal_actions = state.legal_actions()  # 合法手のリスト
+
+        # 合法手で最も価値の高いインデックスを求める
+        value_action = predict(model, state)
+        max_index = np.argmax(value_action[0])
+
+        return legal_actions[max_index]
+
+    return high_value_action
+
 
 # モンテカルロ木探索で行動選択
 def pv_mcts_action(model, temperature=0):
     def pv_mcts_action(state):
         scores = pv_mcts_scores(model, state, temperature)
         return np.random.choice(state.legal_actions(), p=scores)
+
     return pv_mcts_action
+
 
 # ボルツマン分布
 def boltzman(xs, temperature):
     xs = [x ** (1 / temperature) for x in xs]
     return [x / sum(xs) for x in xs]
 
+
 # 動作確認
-if __name__ == '__main__':
+if __name__ == "__main__":
     # モデルの読み込み
-    path = sorted(Path('./model').glob('*.h5'))[-1]
+    path = sorted(Path("./model").glob("*.h5"))[-1]
     model = load_model(str(path))
 
     # 状態の生成
