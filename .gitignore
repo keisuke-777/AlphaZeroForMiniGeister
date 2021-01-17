@@ -5,6 +5,8 @@ model
 model/*
 __pycache__
 __pycache__/*
+need_in_IPSJ
+need_in_IPSJ/*
 not_need_buckup
 not_need_buckup/*
 test
@@ -15,6 +17,7 @@ miniGeisterLog
 miniGeisterLog/*
 buckup
 buckup/*
+
 
 # ver3.6.9
 .python-version
