@@ -240,8 +240,9 @@ class State:
         elif not any(elem == -2 for elem in board):  # 後手の赤駒が存在しない
             win_player[1] += 1  # 後手の勝ち
         else:
-            print(self)
-            print("これはゴール行動なのでは？？？？")
+            pass
+            # print(self)
+            # print("これはゴール行動なのでは？？？？")
 
     # 文字列表示
     def __str__(self):
@@ -304,6 +305,34 @@ def human_player_action(state):
     # エラー処理(デバッグでしか使わんから適当)
     print("非合法手が選択された為、ランダムに行動しました")
     return legal_actions[random.randint(0, len(legal_actions) - 1)]
+
+
+# モンテカルロ木探索用：敵駒のあり得るランダムな状態を返す
+def return_random_shuffle_state(state):
+    shuffle_state = state
+
+    # shuffle_stateの生存している敵駒をリストに格納
+    piece_list = []
+    for i in range(20):
+        if shuffle_state.enemy_pieces[i] != 0:
+            piece_list.append(shuffle_state.enemy_pieces[i])
+
+    # リストをシャッフル
+    random.shuffle(piece_list)
+
+    # shuffle_stateの生存している敵駒に上書き
+    pl_index = 0
+    for i in range(20):
+        if shuffle_state.enemy_pieces[i] != 0:
+            shuffle_state.enemy_pieces[i] = piece_list[pl_index]
+            pl_index += 1
+
+    return shuffle_state
+
+
+# 不完全情報ゲームにおいて、透視をせずに(相手の状況をランダムとして)モンテカルロ木探索の行動選択を行う
+def no_cheat_mcts_action(state):
+    return mcts_action(return_random_shuffle_state(state))
 
 
 # モンテカルロ木探索の行動選択
@@ -397,6 +426,67 @@ def mcts_action(state):
     return legal_actions[argmax(n_list)]
 
 
+def no_cheat_and_fix_mcts_action(state):
+    class node:
+        def __init__(self, state):
+            self.state = state  # 状態
+            self.w = 0  # 累計価値
+            self.n = 0  # 試行回数
+            self.child_nodes = None  # 子ノード群
+
+        def evaluate(self):
+            if self.state.is_done():
+                value = -1 if self.state.is_lose() else 0
+                self.w += value
+                self.n += 1
+                return value
+            if not self.child_nodes:
+                value = playout(return_random_shuffle_state(self.state))  # ランダム状態
+                self.w += value
+                self.n += 1
+                if self.n == 10:
+                    self.expand()
+                return value
+            else:
+                value = -self.next_child_node().evaluate()
+                self.w += value
+                self.n += 1
+                return value
+
+        def expand(self):
+            legal_actions = self.state.legal_actions()
+            self.child_nodes = []
+            for action in legal_actions:
+                self.child_nodes.append(node(self.state.next(action)))
+
+        def next_child_node(self):
+            for child_node in self.child_nodes:
+                if child_node.n == 0:
+                    return child_node
+            t = 0
+            for c in self.child_nodes:
+                t += c.n
+            ucb1_values = []
+            for child_node in self.child_nodes:
+                ucb1_values.append(
+                    -child_node.w / child_node.n
+                    + 2 * (2 * math.log(t) / child_node.n) ** 0.5
+                )
+            return self.child_nodes[argmax(ucb1_values)]
+
+    root_node = node(state)
+    root_node.expand()
+
+    for _ in range(100):
+        root_node.evaluate()
+
+    legal_actions = state.legal_actions()
+    n_list = []
+    for c in root_node.child_nodes:
+        n_list.append(c.n)
+    return legal_actions[argmax(n_list)]
+
+
 # 最大値のインデックスを返す
 def argmax(collection, key=None):
     return collection.index(max(collection))
@@ -413,6 +503,132 @@ def playout(state):
     return -playout(state.next(random_action(state)))
 
 
+# 青駒特攻
+def blue_attack(state):
+    legal_actions = state.legal_actions()
+
+    # ゴール可能であればゴールする
+    if any(elem == 2 for elem in legal_actions):
+        return 2
+    if any(elem == 14 for elem in legal_actions):
+        return 14
+
+    for line in range(5):
+        for row in range(4):
+            # 駒の存在する最小の行を発見
+            if state.pieces[line * 4 + row] == 1:
+                # 0か3に駒が存在(ゴールに近い端っこを優先探索)
+                if state.pieces[line * 4]:
+                    # 合法手か確認して、そうであれば返す
+                    if any(elem == (line * 4) * 4 + 2 for elem in legal_actions):
+                        return (line * 4) * 4 + 2
+                if state.pieces[line * 4 + 3]:
+                    if any(elem == (line * 4 + 3) * 4 + 2 for elem in legal_actions):
+                        return (line * 4 + 3) * 4 + 2
+
+                # 1か2に駒が存在(とりあえず最寄りの端へ移動)
+                if state.pieces[line * 4 + 1]:
+                    # 最寄りの端へ移動(左)
+                    if any(elem == (line * 4 + 1) * 4 + 1 for elem in legal_actions):
+                        return (line * 4 + 1) * 4 + 1
+                    # 無理なら前進
+                    if any(elem == (line * 4 + 1) * 4 + 2 for elem in legal_actions):
+                        return (line * 4 + 1) * 4 + 2
+                if state.pieces[line * 4 + 2]:
+                    # 右
+                    if any(elem == (line * 4 + 2) * 4 + 3 for elem in legal_actions):
+                        return (line * 4 + 2) * 4 + 3
+                    # 前進
+                    if any(elem == (line * 4 + 2) * 4 + 2 for elem in legal_actions):
+                        return (line * 4 + 2) * 4 + 2
+
+    # 全部無理ならランダム手を返す
+    return legal_actions[random.randint(0, len(legal_actions) - 1)]
+
+
+# 赤駒特攻
+def red_attack(state):
+    legal_actions = state.legal_actions()
+
+    # ゴール可能であればゴールする
+    if any(elem == 2 for elem in legal_actions):
+        return 2
+    if any(elem == 14 for elem in legal_actions):
+        return 14
+
+    for line in range(5):
+        for row in range(4):
+            # 駒の存在する最小の行を発見
+            if state.pieces[line * 4 + row] == 2:
+                # 0か3に駒が存在(ゴールに近い端っこを優先探索)
+                if state.pieces[line * 4]:
+                    # 合法手か確認して、そうであれば返す
+                    if any(elem == (line * 4) * 4 + 2 for elem in legal_actions):
+                        return (line * 4) * 4 + 2
+                if state.pieces[line * 4 + 3]:
+                    if any(elem == (line * 4 + 3) * 4 + 2 for elem in legal_actions):
+                        return (line * 4 + 3) * 4 + 2
+
+                # 1か2に駒が存在(とりあえず最寄りの端へ移動)
+                if state.pieces[line * 4 + 1]:
+                    # 最寄りの端へ移動(左)
+                    if any(elem == (line * 4 + 1) * 4 + 1 for elem in legal_actions):
+                        return (line * 4 + 1) * 4 + 1
+                    # 無理なら前進
+                    if any(elem == (line * 4 + 1) * 4 + 2 for elem in legal_actions):
+                        return (line * 4 + 1) * 4 + 2
+                if state.pieces[line * 4 + 2]:
+                    # 右
+                    if any(elem == (line * 4 + 2) * 4 + 3 for elem in legal_actions):
+                        return (line * 4 + 2) * 4 + 3
+                    # 前進
+                    if any(elem == (line * 4 + 2) * 4 + 2 for elem in legal_actions):
+                        return (line * 4 + 2) * 4 + 2
+
+    # 全部無理ならランダム手を返す
+    return legal_actions[random.randint(0, len(legal_actions) - 1)]
+
+
+# 青でも赤でも良いから特攻
+def any_attack(state):
+    legal_actions = state.legal_actions()
+    # ゴール可能であればゴールする
+    if any(elem == 2 for elem in legal_actions):
+        return 2
+    if any(elem == 14 for elem in legal_actions):
+        return 14
+    for line in range(5):
+        for row in range(4):
+            # 駒の存在する最小の行を発見
+            if state.pieces[line * 4 + row] == 1 or state.pieces[line * 4 + row] == 2:
+                # 0か3に駒が存在(ゴールに近い端っこを優先探索)
+                if state.pieces[line * 4]:
+                    # 合法手か確認して、そうであれば返す
+                    if any(elem == (line * 4) * 4 + 2 for elem in legal_actions):
+                        return (line * 4) * 4 + 2
+                if state.pieces[line * 4 + 3]:
+                    if any(elem == (line * 4 + 3) * 4 + 2 for elem in legal_actions):
+                        return (line * 4 + 3) * 4 + 2
+
+                # 1か2に駒が存在(とりあえず最寄りの端へ移動)
+                if state.pieces[line * 4 + 1]:
+                    # 最寄りの端へ移動(左)
+                    if any(elem == (line * 4 + 1) * 4 + 1 for elem in legal_actions):
+                        return (line * 4 + 1) * 4 + 1
+                    # 無理なら前進
+                    if any(elem == (line * 4 + 1) * 4 + 2 for elem in legal_actions):
+                        return (line * 4 + 1) * 4 + 2
+                if state.pieces[line * 4 + 2]:
+                    # 右
+                    if any(elem == (line * 4 + 2) * 4 + 3 for elem in legal_actions):
+                        return (line * 4 + 2) * 4 + 3
+                    # 前進
+                    if any(elem == (line * 4 + 2) * 4 + 2 for elem in legal_actions):
+                        return (line * 4 + 2) * 4 + 2
+    # 全部無理ならランダム手を返す
+    return legal_actions[random.randint(0, len(legal_actions) - 1)]
+
+
 import GuessEnemyPiece
 import numpy as np
 import itertools
@@ -421,11 +637,73 @@ from pv_mcts import predict
 from dual_network import DN_INPUT_SHAPE
 from pathlib import Path
 from tensorflow.keras.models import load_model
+from tensorflow.keras.models import Model
+from tensorflow.keras.regularizers import l2
+from tensorflow.keras import backend as K
+
+# logのやつの戦闘データ一気にとる
+drow_count = 0
 
 
-# 動作確認
-if __name__ == "__main__":
+def evaluate_miniGeisterLog():
+    global drow_count
+    for i in range(1, 34):
+        drow_count = 0
+        model_pass_str = "./miniGeisterLog/log" + str(i) + ".h5"
+        model = load_model(model_pass_str)
+        win_player = [0, 0]
+        for _ in range(100):
+            # 直前の行動を保管
+            just_before_action_num = 0
 
+            # 状態の生成
+            state = State()
+            blue_id_list = state.get_blue_from_keep_pieces_color()
+            ii_state = GuessEnemyPiece.II_State(
+                {blue_id_list[2], blue_id_list[3]}, {blue_id_list[0], blue_id_list[1]}
+            )
+
+            # ゲーム終了までのループ
+            while True:
+                # ゲーム終了時
+                if state.is_done():
+                    break
+
+                # 次の状態の取得
+                if state.depth % 2 == 0:
+                    # just_before_action_num = random_action(state)  # ランダム
+                    # just_before_action_num = mcts_action(state)  # 透視モンテカルロ木探索
+                    # just_before_action_num = no_cheat_mcts_action(
+                    #     state
+                    # )  # ズルなしモンテカルロ木探索
+                    just_before_action_num = no_cheat_and_fix_mcts_action(
+                        state
+                    )  # ズルなし固定なしモンテカルロ木探索
+                    if just_before_action_num == 2 or just_before_action_num == 14:
+                        state.is_goal = True
+                        state.goal_player = 0
+                        break
+                    state = state.next(just_before_action_num)
+                else:
+                    just_before_enemy_action_num = just_before_action_num
+                    guess_player_action = GuessEnemyPiece.guess_enemy_piece_player_for_debug(
+                        model, ii_state, just_before_enemy_action_num
+                    )
+                    just_before_action_num = guess_player_action
+
+                    if just_before_action_num == 2 or just_before_action_num == 14:
+                        state.is_goal = True
+                        state.goal_player = 1
+                        break
+                    state = state.next(just_before_action_num)
+            state.winner_checker(win_player)
+        print("[log_player,mcts]:", win_player)
+    K.clear_session()
+    del model
+
+
+# 動作確認(main)
+def evaluate_main():
     # GuessEnemyPieceに必要な処理
     path = sorted(Path("./model").glob("*.h5"))[-1]
     model = load_model(str(path))
@@ -435,7 +713,7 @@ if __name__ == "__main__":
 
     with open("estimate_accuracy.csv", "w") as csvFile:
         csvWriter = csv.writer(csvFile)
-        # csvWriter.writerow([])  # 改行
+        csvWriter.writerow([])  # 改行
 
         for _ in range(1000):
 
@@ -454,24 +732,22 @@ if __name__ == "__main__":
             while True:
                 # ゲーム終了時
                 if state.is_done():
-                    # print("ゲーム終了:ターン数", state.depth)
-
-                    # if state.is_lose():
-                    #     if state.depth % 2 == 0:
-                    #         print("敗北")
-                    #     else:
-                    #         print("勝利or引き分け")
-                    # else:
-                    #     if state.depth % 2 == 1:
-                    #         print("勝利or引き分け")
-                    #     else:
-                    #         print("敗北")
                     break
 
                 # 次の状態の取得
                 if state.depth % 2 == 0:
-                    just_before_action_num = random_action(state)  # ランダム
-                    # just_before_action_num = mcts_action(state)  # モンテカルロ
+                    # just_before_action_num = random_action(state)  # ランダム
+                    # just_before_action_num = mcts_action(state)  # 透視モンテカルロ木探索
+                    # just_before_action_num = no_cheat_mcts_action(
+                    #     state
+                    # )  # ズルなしモンテカルロ木探索
+                    # just_before_action_num = no_cheat_and_fix_mcts_action(
+                    #     state
+                    # )  # ズルなし固定なしモンテカルロ木探索
+                    just_before_action_num = blue_attack(state)  # 青駒特攻
+                    # just_before_action_num = red_attack(state)  # 赤駒特攻
+                    # just_before_action_num = any_attack(state)  # なんでも特攻
+
                     # just_before_action_num = human_player_action(state)  # 人間
                     # print("ランダムAIの行動番号", just_before_action_num)
                     if just_before_action_num == 2 or just_before_action_num == 14:
@@ -508,6 +784,13 @@ if __name__ == "__main__":
                 if PRINT_DEBUG:
                     print(state)
             state.winner_checker(win_player)
+            print(state.depth)
             print(win_player)
 
     csvFile.close()
+
+
+# 動作確認
+if __name__ == "__main__":
+    # evaluate_miniGeisterLog()
+    evaluate_main()
